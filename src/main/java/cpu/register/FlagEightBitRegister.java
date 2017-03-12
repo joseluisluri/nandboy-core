@@ -13,6 +13,14 @@ public class FlagEightBitRegister implements EightBitRegister {
 	@Getter
 	private byte value;
 
+	private FlagEightBitRegister() {
+
+	}
+
+	public static FlagEightBitRegister newInstance() {
+		return new FlagEightBitRegister();
+	}
+
 	public boolean getZeroFlag() {
 		return (zeroFlagBitmask & value) == zeroFlagBitmask;
 	}

@@ -1,5 +1,7 @@
-package cpu.opcode;
+package cpu;
 
+import cpu.exceptions.InstructionException;
+import cpu.exceptions.NoSuchOpcodeException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -54,13 +56,13 @@ import static org.junit.Assert.assertEquals;
  */
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({OpCodeTest.OpCodeCycleTimingTest.class})
-public class OpCodeTest {
+@Suite.SuiteClasses({InstructionTest.InstructionCycleTimingTest.class})
+public class InstructionTest {
     @RunWith(Parameterized.class)
-    public static class OpCodeCycleTimingTest {
+    public static class InstructionCycleTimingTest {
 
         private short cycles;
-        private byte opCode;
+        private byte opcode;
 
         @Parameterized.Parameters
         public static Collection<Object[]> data() {
@@ -72,14 +74,14 @@ public class OpCodeTest {
             });
         }
 
-        public OpCodeCycleTimingTest(short cycles, byte opCode) {
+        public InstructionCycleTimingTest(short cycles, byte opcode) {
             this.cycles = cycles;
-            this.opCode = opCode;
+            this.opcode = opcode;
         }
 
         @Test
-        public void test() throws OpCodeException {
-            assertEquals("Invalid number of cycles int OpCode", cycles, OpCode.fromByte(this.opCode).getCycles());
+        public void test() throws NoSuchOpcodeException {
+            assertEquals("Invalid number of cycles", cycles, ProcessorHelper.getCyclesFromOpcode(opcode));
         }
     }
 }

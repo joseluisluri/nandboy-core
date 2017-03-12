@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Setter
 @Getter
-public class DefaultSixteenBitRegister implements SixteenBitRegister {
+class DefaultSixteenBitRegister implements SixteenBitRegister {
 	private byte highByte;
 	private byte lowByte;
 

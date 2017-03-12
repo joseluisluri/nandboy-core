@@ -9,4 +9,12 @@ public interface SixteenBitRegister {
 
 	void setLowByte(byte b);
 	byte getLowByte();
+
+	static SixteenBitRegister newInstance() {
+		return new DefaultSixteenBitRegister();
+	}
+
+	static SixteenBitRegister newInstance(EightBitRegister highRegister, EightBitRegister lowRegister) {
+		return new ComposedSixteenBitRegister(highRegister, lowRegister);
+	}
 }

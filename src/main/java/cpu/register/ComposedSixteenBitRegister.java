@@ -6,7 +6,7 @@ import lombok.NonNull;
 
 @Setter
 @Getter
-public class ComposedSixteenBitRegister extends DefaultSixteenBitRegister {
+class ComposedSixteenBitRegister extends DefaultSixteenBitRegister {
 	private final EightBitRegister highRegister;
 	private final EightBitRegister lowRegister;
 
