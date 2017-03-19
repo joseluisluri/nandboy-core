@@ -1,67 +1,301 @@
 package cpu;
 
-import cpu.register.EightBitRegister;
+import core.DWord;
+import core.Datatype;
+import core.Word;
 import org.junit.Before;
 import org.junit.Test;
 
+import static core.Datatype.parseDWord;
+import static core.Datatype.parseWord;
 import static org.junit.Assert.assertEquals;
 
 public class ProcessorHelperTest {
 
+    static byte ALL_FLAGS_SET = (byte) 0xF0;
+
+    Processor processor = Processor.getInstance();
+
     @Before
     public void setUp() {
-        Processor.A.setValue((byte)0x00);
-        Processor.B.setValue((byte)0x00);
-        Processor.C.setValue((byte)0x00);
-        Processor.D.setValue((byte)0x00);
-        Processor.E.setValue((byte)0x00);
-        Processor.F.setValue((byte)0x00);
-        Processor.H.setValue((byte)0x00);
-        Processor.L.setValue((byte)0x00);
+        processor.reset();
     }
 
     @Test
-    public void incrementEightBitRegister_0x00_Returns0x01() {
+    public void setZeroFlagTrueSetsZeroFlag() {
+        ProcessorHelper.setZeroFlag(true); // act
+        assertEquals("ZeroFlag must be set in F", ProcessorHelper.ZERO_FLAG_BITMASK, processor.F.getValue());
+        assertEquals("ZeroFlag must be true", true, ProcessorHelper.getZeroFlag());
+    }
+
+    @Test
+    public void setZeroFlagFalseUnsetsZeroFlag() {
         // arrange
-        EightBitRegister eightBitRegister = EightBitRegister.newInstance();
-        eightBitRegister.setValue((byte) 0x00);
-
-        ProcessorHelper.increment(eightBitRegister); // act
-
-        assertEquals((byte) 0x01, eightBitRegister.getValue());
-        assertEquals("Flags have been changed", Processor.F.getValue(), (byte) 0x00);
+        processor.F.setValue(parseWord(ALL_FLAGS_SET));
+        byte expectedResult = (byte) 0x70;
+        // act
+        ProcessorHelper.setZeroFlag(false);
+        assertEquals("ZeroFlag must be unseted in F", expectedResult, processor.F.getValue());
+        assertEquals("ZeroFlag must be false", false, ProcessorHelper.getZeroFlag());
     }
 
     @Test
-    public void incrementEightBitRegister_0xFF_Returns0x00() {
-        EightBitRegister eightBitRegister = EightBitRegister.newInstance(); // arrange
-        eightBitRegister.setValue((byte) 0xFF);
-
-        ProcessorHelper.increment(eightBitRegister); // act
-
-        assertEquals((byte) 0x00, eightBitRegister.getValue());
-        assertEquals("Expected: Z=1,N=0;H=1,C=1,0000", Processor.F.getValue(), (byte) 0xB0);
+    public void setSubtractFlagTrueSetsSubtractFlag() {
+        ProcessorHelper.setSubtractFlag(true); // act
+        assertEquals("SubtractFlag must be set in F", ProcessorHelper.SUBSTRACT_FLAG_BITMASK, processor.F.getValue());
+        assertEquals("SubtractFlag must be true", true, ProcessorHelper.getSubtractFlag());
     }
 
     @Test
-    public void decrementEightBitRegister_0x01_Returns0x00() {
-        EightBitRegister eightBitRegister = EightBitRegister.newInstance();  // arrange
-        eightBitRegister.setValue((byte) 0x01);
-
-        ProcessorHelper.decrement(eightBitRegister); // act
-
-        assertEquals((byte) 0x00, eightBitRegister.getValue());
+    public void setSubtractFlagFlaseUnsetsSubtractFlag() {
+        // arrange
+        processor.F.setValue(parseWord(ALL_FLAGS_SET));
+        byte expectedResult = (byte) 0xB0;
+        // act
+        ProcessorHelper.setSubtractFlag(false);
+        assertEquals("SubtractFlag must be unset in F", expectedResult, processor.F.getValue());
+        assertEquals("SubtractFlag must be false", false, ProcessorHelper.getSubtractFlag());
     }
 
     @Test
-    public void decrementEightBitRegister_0x00_Returns0xFF() {
-        EightBitRegister eightBitRegister = EightBitRegister.newInstance(); // arrange
-        eightBitRegister.setValue((byte) 0x00);
-
-        ProcessorHelper.decrement(eightBitRegister); // act
-
-        assertEquals((byte) 0xFF, eightBitRegister.getValue());
+    public void setHalfCarryFlagTrueSetsHalfCarryFlag() {
+        ProcessorHelper.setHalfCarryFlag(true); // act
+        assertEquals("HalfCarryFlag must be set in F", ProcessorHelper.HALF_CARRY_FLAG_BITMASK, processor.F.getValue());
+        assertEquals("HalfCarryFlag must be true", true, ProcessorHelper.getHalfCarryFlag());
     }
 
+    @Test
+    public void setHalfCarryFlagFalseUnsetsHalfCarryFlag() {
+        // arrange
+        processor.F.setValue(parseWord(ALL_FLAGS_SET));
+        byte expectedResult = (byte) 0xD0;
+        // act
+        ProcessorHelper.setHalfCarryFlag(false);
+        assertEquals("HalfCarryFlag must be unset in F", expectedResult, processor.F.getValue());
+        assertEquals("HalfCarryFLag must be false", false, ProcessorHelper.getHalfCarryFlag());
+    }
 
+    @Test
+    public void setCarryFlagTrueSetsCarryFlag() {
+        ProcessorHelper.setCarryFlag(true); // act
+        assertEquals("CarryFlag must be set in F", ProcessorHelper.CARRY_FLAG_BITMASK, processor.F.getValue());
+        assertEquals("CarryFlag must be true", true, ProcessorHelper.getCarryFlag());
+    }
+
+    @Test
+    public void setCarryFlagFalseUnsetsCarryFlag() {
+        // arrange
+        processor.F.setValue(parseWord(ALL_FLAGS_SET));
+        byte expectedResult = (byte) 0xE0;
+        // act
+        ProcessorHelper.setCarryFlag(false);
+        assertEquals("CarryFlag must be unset in F", expectedResult, processor.F.getValue());
+        assertEquals("CarryFLag must be false", false, ProcessorHelper.getCarryFlag());
+    }
+
+    /**
+     * Case 1: 0x01 + 0x01 = 0x02 -> Z=0 N=0 H=0 C=0
+     * Case 2: 0x00 + 0x00 = 0x00 -> Z=1 N=0 H=0 C=0
+     * Case 3: 0x0D + 0x03 = 0x10 -> Z=0 N=0 H=1 C=0
+     * Case 4: 0xC0 + 0x50 = 0x10 -> Z=0 N=0 H=0 C=1
+     * Case 5: 0xFF + 0x02 = 0x01 -> Z=0 N=0 H=1 C=1
+     * Case 4: 0xFE + 0x02 = 0x00 -> Z=1 N=0 H=1 C=1
+     */
+    @Test
+    public void addTestCase1() {
+        // arrange
+        Word op1 = parseWord(0x01);
+        Word op2 = parseWord(0x01);
+        WRegister register = WRegister.newInstance();
+        register.setValue(op1);
+        // act
+        ProcessorHelper.add(register, op2);
+        // assert
+        assertEquals("Result must be 0x02", parseWord(0x02).getValue(), register.getValue());
+        assertEquals("ZeroFlag must be false", false, ProcessorHelper.getZeroFlag());
+        assertEquals("SubtractFlag must be false", false, ProcessorHelper.getSubtractFlag());
+        assertEquals("HalfCarryFlag must be false", false, ProcessorHelper.getHalfCarryFlag());
+        assertEquals("CarryFlag must be false", false, ProcessorHelper.getCarryFlag());
+    }
+
+    @Test
+    public void addTestCase2() {
+        // arrange
+        Word op1 = parseWord(0x00);
+        Word op2 = parseWord(0x00);
+        WRegister register = WRegister.newInstance();
+        register.setValue(op1);
+        // act
+        ProcessorHelper.add(register, op2);
+        // assert
+        assertEquals("Result must be 0x00", parseWord(0x00).getValue(), register.getValue());
+        assertEquals("ZeroFlag must be true", true, ProcessorHelper.getZeroFlag());
+        assertEquals("SubtractFlag must be false", false, ProcessorHelper.getSubtractFlag());
+        assertEquals("HalfCarryFlag must be false", false, ProcessorHelper.getHalfCarryFlag());
+        assertEquals("CarryFlag must be false", false, ProcessorHelper.getCarryFlag());
+    }
+
+    @Test
+    public void addTestCase3() {
+        // arrange
+        Word op1 = parseWord(0x0D);
+        Word op2 = parseWord(0x03);
+        WRegister register = WRegister.newInstance();
+        register.setValue(op1);
+        // act
+        ProcessorHelper.add(register, op2);
+        // assert
+        assertEquals("Result must be 0x10", parseWord(0x10).getValue(), register.getValue());
+        assertEquals("ZeroFlag must be false", false, ProcessorHelper.getZeroFlag());
+        assertEquals("SubtractFlag must be false", false, ProcessorHelper.getSubtractFlag());
+        assertEquals("HalfCarryFlag must be true", true, ProcessorHelper.getHalfCarryFlag());
+        assertEquals("CarryFlag must be false", false, ProcessorHelper.getCarryFlag());
+    }
+
+    @Test
+    public void addTestCase4() {
+        // arrange
+        Word op1 = parseWord(0xC0);
+        Word op2 = parseWord(0x50);
+        WRegister register = WRegister.newInstance();
+        register.setValue(op1);
+        // act
+        ProcessorHelper.add(register, op2);
+        // assert
+        assertEquals("Result must be 0x10", parseWord(0x10).getValue(), register.getValue());
+        assertEquals("ZeroFlag must be false", false, ProcessorHelper.getZeroFlag());
+        assertEquals("SubtractFlag must be false", false, ProcessorHelper.getSubtractFlag());
+        assertEquals("HalfCarryFlag must be false", false, ProcessorHelper.getHalfCarryFlag());
+        assertEquals("CarryFlag must be true", true, ProcessorHelper.getCarryFlag());
+    }
+
+    @Test
+    public void addTestCase5() {
+        // arrange
+        Word op1 = parseWord(0xFF);
+        Word op2 = parseWord(0x02);
+        WRegister register = WRegister.newInstance();
+        register.setValue(op1);
+        // act
+        ProcessorHelper.add(register, op2);
+        // assert
+        assertEquals("Result must be 0x01", parseWord(0x01).getValue(), register.getValue());
+        assertEquals("ZeroFlag must be false", false, ProcessorHelper.getZeroFlag());
+        assertEquals("SubtractFlag must be false", false, ProcessorHelper.getSubtractFlag());
+        assertEquals("HalfCarryFlag must be true", true, ProcessorHelper.getHalfCarryFlag());
+        assertEquals("CarryFlag must be true", true, ProcessorHelper.getCarryFlag());
+    }
+
+    @Test
+    public void addTestCase6() {
+        // arrange
+        Word op1 = parseWord(0xFE);
+        Word op2 = parseWord(0x02);
+        WRegister register = WRegister.newInstance();
+        register.setValue(op1);
+        // act
+        ProcessorHelper.add(register, op2);
+        // assert
+        assertEquals("Result must be 0x00", parseWord(0x00).getValue(), register.getValue());
+        assertEquals("ZeroFlag must be true", true, ProcessorHelper.getZeroFlag());
+        assertEquals("SubtractFlag must be false", false, ProcessorHelper.getSubtractFlag());
+        assertEquals("HalfCarryFlag must be true", true, ProcessorHelper.getHalfCarryFlag());
+        assertEquals("CarryFlag must be true", true, ProcessorHelper.getCarryFlag());
+    }
+
+    /**
+     * inc Word
+     */
+    @Test
+    public void incWordLowNibble() {
+        Word word = parseWord(0x03);
+        ProcessorHelper.inc(word, parseWord(0x2));
+        assertEquals("Value must be 0x05", parseWord(0x05), word);
+    }
+
+    @Test
+    public void incWordHighNibble() {
+        Word word = parseWord(0x0D);
+        ProcessorHelper.inc(word, parseWord(0x05));
+        assertEquals("Value must be 0x12", parseWord(0x12), word);
+    }
+
+    @Test
+    public void incWordOverflow() {
+        Word word = parseWord(0xFF);
+        ProcessorHelper.inc(word, parseWord(0x2));
+        assertEquals("Value must be 0x01", parseWord(0x01), word);
+    }
+
+    /**
+     * dec Word
+     */
+    @Test
+    public void decWordLowNibble() {
+        Word word = parseWord(0x0C);
+        ProcessorHelper.dec(word, parseWord(0x2));
+        assertEquals("Value must be 0x0A", parseWord(0x0A), word);
+    }
+
+    @Test
+    public void decWordHighNibble() {
+        Word word = parseWord(0x1B);
+        ProcessorHelper.dec(word, parseWord(0x0F));
+        assertEquals("Value must be 0x0C", parseWord(0x0C), word);
+    }
+
+    @Test
+    public void decWordUnderflow() {
+        Word word = parseWord(0x01);
+        ProcessorHelper.dec(word, parseWord(0x2));
+        assertEquals("Value must be 0xFF", parseWord(0xFF), word);
+    }
+
+    /**
+     * inc DWord
+     */
+    @Test
+    public void incDwordLowWord() {
+        DWord dword = parseDWord(0x0001);
+        ProcessorHelper.inc(dword, parseWord(0x01));
+        assertEquals("Value must be 0x0002", parseDWord(0x0002), dword);
+    }
+
+    @Test
+    public void incDwordHighWord() {
+        DWord dword = parseDWord(0x00FF);
+        ProcessorHelper.inc(dword, parseWord(0xFF));
+        assertEquals("Value must be 0x01FE", parseDWord(0x01FE), dword);
+    }
+
+    @Test
+    public void incDwordOverFlow() {
+        DWord dword = parseDWord(0xFFFF);
+        ProcessorHelper.inc(dword, parseWord(0x02));
+        assertEquals("Value must be 0x0001", parseDWord(0x0001), dword);
+    }
+
+    /**
+     * dec DWord
+     */
+    @Test
+    public void decDwordLowBytePart() {
+        DWord dword = parseDWord(0x0005);
+        ProcessorHelper.dec(dword, parseWord(0x03));
+        assertEquals("Value must be 0x0002", parseDWord(0x0002), dword);
+    }
+
+    @Test
+    public void decDwordHighBytePart() {
+        DWord dword = parseDWord(0x100);
+        ProcessorHelper.dec(dword, parseWord(0xFF));
+        assertEquals("Value must be 0x0001", parseDWord(0x0001), dword);
+    }
+
+    @Test
+    public void decDwordUnderFlow() {
+        DWord dword = parseDWord(0xAAAA);
+        ProcessorHelper.dec(dword, parseWord(0xFF));
+        assertEquals("Value must be 0xA9AB", parseDWord(0xA9AB), dword);
+    }
 }

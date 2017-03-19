@@ -5,11 +5,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class InstructionException extends Exception {
 
-    InstructionException(String message) {
+    public InstructionException(String message) {
         super(message);
     }
 
-    InstructionException(String message, Exception e) {
+    public InstructionException(String message, Exception e) {
         super(message, e);
     }
 
