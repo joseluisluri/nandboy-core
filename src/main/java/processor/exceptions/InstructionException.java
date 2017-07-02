@@ -1,4 +1,4 @@
-package cpu.exceptions;
+package processor.exceptions;
 
 import lombok.NoArgsConstructor;
 

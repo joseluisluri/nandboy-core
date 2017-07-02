@@ -1,20 +1,20 @@
-package cpu;
+package processor;
 
-import core.DWord;
-import core.Datatype;
-import core.Word;
+import common.DataHelper;
+import processor.registers.WRegister;
+import common.DWord;
+import common.Word;
 import org.junit.Before;
 import org.junit.Test;
 
-import static core.Datatype.parseDWord;
-import static core.Datatype.parseWord;
+import static common.DataHelper.parseDWord;
+import static common.DataHelper.parseWord;
 import static org.junit.Assert.assertEquals;
 
 public class ProcessorHelperTest {
+    private static byte ALL_FLAGS_SET = (byte) 0xF0;
 
-    static byte ALL_FLAGS_SET = (byte) 0xF0;
-
-    Processor processor = Processor.getInstance();
+    private Processor processor = Processor.getInstance();
 
     @Before
     public void setUp() {
@@ -29,13 +29,13 @@ public class ProcessorHelperTest {
     }
 
     @Test
-    public void setZeroFlagFalseUnsetsZeroFlag() {
+    public void setZeroFlagFalseResetsZeroFlag() {
         // arrange
         processor.F.setValue(parseWord(ALL_FLAGS_SET));
         byte expectedResult = (byte) 0x70;
         // act
         ProcessorHelper.setZeroFlag(false);
-        assertEquals("ZeroFlag must be unseted in F", expectedResult, processor.F.getValue());
+        assertEquals("ZeroFlag must be reset in F", expectedResult, processor.F.getValue());
         assertEquals("ZeroFlag must be false", false, ProcessorHelper.getZeroFlag());
     }
 
@@ -47,13 +47,13 @@ public class ProcessorHelperTest {
     }
 
     @Test
-    public void setSubtractFlagFlaseUnsetsSubtractFlag() {
+    public void setSubtractFlagFlaseResetsSubtractFlag() {
         // arrange
         processor.F.setValue(parseWord(ALL_FLAGS_SET));
         byte expectedResult = (byte) 0xB0;
         // act
         ProcessorHelper.setSubtractFlag(false);
-        assertEquals("SubtractFlag must be unset in F", expectedResult, processor.F.getValue());
+        assertEquals("SubtractFlag must be reset in F", expectedResult, processor.F.getValue());
         assertEquals("SubtractFlag must be false", false, ProcessorHelper.getSubtractFlag());
     }
 
@@ -65,13 +65,13 @@ public class ProcessorHelperTest {
     }
 
     @Test
-    public void setHalfCarryFlagFalseUnsetsHalfCarryFlag() {
+    public void setHalfCarryFlagFalseResetsHalfCarryFlag() {
         // arrange
         processor.F.setValue(parseWord(ALL_FLAGS_SET));
         byte expectedResult = (byte) 0xD0;
         // act
         ProcessorHelper.setHalfCarryFlag(false);
-        assertEquals("HalfCarryFlag must be unset in F", expectedResult, processor.F.getValue());
+        assertEquals("HalfCarryFlag must be reset in F", expectedResult, processor.F.getValue());
         assertEquals("HalfCarryFLag must be false", false, ProcessorHelper.getHalfCarryFlag());
     }
 
@@ -83,13 +83,13 @@ public class ProcessorHelperTest {
     }
 
     @Test
-    public void setCarryFlagFalseUnsetsCarryFlag() {
+    public void setCarryFlagFalseResetsCarryFlag() {
         // arrange
         processor.F.setValue(parseWord(ALL_FLAGS_SET));
         byte expectedResult = (byte) 0xE0;
         // act
         ProcessorHelper.setCarryFlag(false);
-        assertEquals("CarryFlag must be unset in F", expectedResult, processor.F.getValue());
+        assertEquals("CarryFlag must be reset in F", expectedResult, processor.F.getValue());
         assertEquals("CarryFLag must be false", false, ProcessorHelper.getCarryFlag());
     }
 
@@ -209,21 +209,21 @@ public class ProcessorHelperTest {
     @Test
     public void incWordLowNibble() {
         Word word = parseWord(0x03);
-        ProcessorHelper.inc(word, parseWord(0x2));
+        DataHelper.inc(word, parseWord(0x2));
         assertEquals("Value must be 0x05", parseWord(0x05), word);
     }
 
     @Test
     public void incWordHighNibble() {
         Word word = parseWord(0x0D);
-        ProcessorHelper.inc(word, parseWord(0x05));
+        DataHelper.inc(word, parseWord(0x05));
         assertEquals("Value must be 0x12", parseWord(0x12), word);
     }
 
     @Test
     public void incWordOverflow() {
         Word word = parseWord(0xFF);
-        ProcessorHelper.inc(word, parseWord(0x2));
+        DataHelper.inc(word, parseWord(0x2));
         assertEquals("Value must be 0x01", parseWord(0x01), word);
     }
 
@@ -233,21 +233,21 @@ public class ProcessorHelperTest {
     @Test
     public void decWordLowNibble() {
         Word word = parseWord(0x0C);
-        ProcessorHelper.dec(word, parseWord(0x2));
+        DataHelper.dec(word, parseWord(0x2));
         assertEquals("Value must be 0x0A", parseWord(0x0A), word);
     }
 
     @Test
     public void decWordHighNibble() {
         Word word = parseWord(0x1B);
-        ProcessorHelper.dec(word, parseWord(0x0F));
+        DataHelper.dec(word, parseWord(0x0F));
         assertEquals("Value must be 0x0C", parseWord(0x0C), word);
     }
 
     @Test
     public void decWordUnderflow() {
         Word word = parseWord(0x01);
-        ProcessorHelper.dec(word, parseWord(0x2));
+        DataHelper.dec(word, parseWord(0x2));
         assertEquals("Value must be 0xFF", parseWord(0xFF), word);
     }
 
@@ -257,21 +257,21 @@ public class ProcessorHelperTest {
     @Test
     public void incDwordLowWord() {
         DWord dword = parseDWord(0x0001);
-        ProcessorHelper.inc(dword, parseWord(0x01));
+        DataHelper.inc(dword, parseWord(0x01));
         assertEquals("Value must be 0x0002", parseDWord(0x0002), dword);
     }
 
     @Test
     public void incDwordHighWord() {
         DWord dword = parseDWord(0x00FF);
-        ProcessorHelper.inc(dword, parseWord(0xFF));
+        DataHelper.inc(dword, parseWord(0xFF));
         assertEquals("Value must be 0x01FE", parseDWord(0x01FE), dword);
     }
 
     @Test
     public void incDwordOverFlow() {
         DWord dword = parseDWord(0xFFFF);
-        ProcessorHelper.inc(dword, parseWord(0x02));
+        DataHelper.inc(dword, parseWord(0x02));
         assertEquals("Value must be 0x0001", parseDWord(0x0001), dword);
     }
 
@@ -281,21 +281,21 @@ public class ProcessorHelperTest {
     @Test
     public void decDwordLowBytePart() {
         DWord dword = parseDWord(0x0005);
-        ProcessorHelper.dec(dword, parseWord(0x03));
+        DataHelper.dec(dword, parseWord(0x03));
         assertEquals("Value must be 0x0002", parseDWord(0x0002), dword);
     }
 
     @Test
     public void decDwordHighBytePart() {
         DWord dword = parseDWord(0x100);
-        ProcessorHelper.dec(dword, parseWord(0xFF));
+        DataHelper.dec(dword, parseWord(0xFF));
         assertEquals("Value must be 0x0001", parseDWord(0x0001), dword);
     }
 
     @Test
     public void decDwordUnderFlow() {
         DWord dword = parseDWord(0xAAAA);
-        ProcessorHelper.dec(dword, parseWord(0xFF));
+        DataHelper.dec(dword, parseWord(0xFF));
         assertEquals("Value must be 0xA9AB", parseDWord(0xA9AB), dword);
     }
 }

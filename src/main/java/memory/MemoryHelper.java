@@ -1,8 +1,10 @@
 package memory;
 
-import core.DWord;
-import core.Datatype;
-import core.MemoryAddr;
+import common.DWord;
+import common.DataHelper;
+import common.MemoryAddr;
+
+import static common.DataHelper.parseMemoryAddr;
 
 public class MemoryHelper {
 
@@ -22,9 +24,9 @@ public class MemoryHelper {
 
     public static MemoryAddr getNextFrom(MemoryAddr memoryAddr) {
         if (!memoryAddr.equals(MAX_ADDR_VALUE)) {
-            /*
-            Datatype.increment(address, 1);*/
-            return memoryAddr;
+            DWord address = memoryAddr.getAddress();
+            DataHelper.inc(address, 1);
+            return parseMemoryAddr(address);
         } else {
             return null;
         }

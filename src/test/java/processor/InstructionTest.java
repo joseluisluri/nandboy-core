@@ -39,7 +39,7 @@ public class InstructionTest {
 		private byte opcode;
 
 		@Parameterized.Parameters
-		public static Collection<Object[]> data() {
+		public static Collection<Object[]> common() {
 			return Arrays.asList(new Object[][]{
 				// normal instructions
 				{(short) 1, (byte) 0x00}, //{(short) 3, (byte) 0x01}

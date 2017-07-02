@@ -1,59 +1,60 @@
-package cpu;
+package processor;
 
-import core.DWord;
-import core.Datatype;
-import core.MemoryAddr;
-import core.Word;
+import common.DataHelper;
+import memory.Memory;
+import processor.registers.DWRegister;
+import processor.registers.WRegister;
+import common.DWord;
+import common.MemoryAddr;
+import common.Word;
 import memory.MemoryHelper;
-import memory.MemoryMap;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
-import static core.Datatype.*;
-
 public class Processor {
+    private static Processor singleton = null;
 
-	private static Processor singleton = null;
+    /**
+     * Program Counter is initialized to 0x0100 when the GameBoy is turned on.
+     */
+    private static final DWord PC_INIT_VALUE = DataHelper.parseDWord(0x0100);
+    private static final Word ZERO = DataHelper.parseWord(0x00);
+    private static final DWord DZERO = DataHelper.parseDWord(0x0000);
 
-	public static Processor getInstance() {
-		if (singleton == null) {
-			singleton = new Processor(MemoryMap.getInstance());
-		}
-		return singleton;
-	}
-
-	protected final MemoryMap memoryMap;
-
-	/**
-	 * Registers
-	 */
-	protected final WRegister A = WRegister.newInstance(); // Accumulator
+    // Registers
+	protected final WRegister A = WRegister.newInstance();
 	protected final WRegister B = WRegister.newInstance();
 	protected final WRegister C = WRegister.newInstance();
 	protected final WRegister D = WRegister.newInstance();
 	protected final WRegister E = WRegister.newInstance();
-	protected final WRegister F = WRegister.newInstance(); // Flags
+	protected final WRegister F = WRegister.newInstance();
 	protected final WRegister H = WRegister.newInstance();
 	protected final WRegister L = WRegister.newInstance();
-
 	protected final DWRegister AF = DWRegister.fromPair(A, F);
 	protected final DWRegister BC = DWRegister.fromPair(B, C);
 	protected final DWRegister DE = DWRegister.fromPair(D, E);
 	protected final DWRegister HL = DWRegister.fromPair(H, L);
-	protected final DWRegister SP = DWRegister.newInstance(); //Stack Pointer
-	protected final DWRegister PC = DWRegister.newInstance(); // Program Counter
+	protected final DWRegister SP = DWRegister.newInstance();
+	protected final DWRegister PC = DWRegister.newInstance();
 
-	/**
-	 * Program Counter is initialized to 0x0100 when the GameBoy is turned on.
-	 */
-	private static final DWord PC_INIT_VALUE = Datatype.parseDWord(0x0100);
+	// Instruction Set Architecture
+    protected final Map<Byte, Instruction> isa = new HashMap<>();
 
+    // Memory
+    protected final Memory memory;
 
-	protected Processor(MemoryMap memoryMap) {
+    public static Processor getInstance() {
+        if (singleton == null) {
+            singleton = new Processor(Memory.getInstance());
+        }
+        return singleton;
+    }
 
-		this.memoryMap = memoryMap;
+	protected Processor(Memory memory) {
+
+		this.memory = memory;
 
 		PC.setValue(PC_INIT_VALUE);
 
@@ -66,7 +67,7 @@ public class Processor {
         }
     }
 
-	final static Map<Byte, Instruction> isa = new HashMap<>(); /*< Instruction Set Architecture */
+
 
     @Opcode(code = 0x00, cycles = 1) void x00() { /* NOP */ }
 
@@ -92,24 +93,26 @@ public class Processor {
 	// LD A, (ii)
 	@Opcode(code = 0xFA, cycles = 16) void xFA() { LD_RMI(A); }
 
-	// LD (ii), A
+	// LD (r16), A
 	@Opcode(code = 0x02, cycles = 8) void x02() { LD_MR(BC, A); }
 	@Opcode(code = 0x12, cycles = 8) void x12() { LD_MR(DE, A); }
 	@Opcode(code = 0x77, cycles = 8) void x77() { LD_MR(HL, A); }
+
+	// LD (ii), A
 	@Opcode(code = 0xEA, cycles = 16) void xEA() { LD_MIR(A); }
 
-	// LD A, (C)
+	// LD A, (0xFF00 + C)
 	@Opcode(code = 0xF2, cycles = 8) void xF2() {
-		DWord address = parseDWord(0xFF00);
-		ProcessorHelper.inc(address, C);
-		A.setValue(memoryMap.retrieveWord(parseMemoryAddr(address)));
+		DWord address = DataHelper.parseDWord(0xFF00);
+		DataHelper.inc(address, C);
+		A.setValue(memory.retrieveWord(DataHelper.parseMemoryAddr(address)));
 	}
 
-	// LD (C), A
-	@Opcode(code = 0xF2, cycles = 8) void xE2() {
-		DWord address = parseDWord(0xFF00);
-		ProcessorHelper.inc(address, C);
-		memoryMap.loadWord(parseMemoryAddr(address), A);
+	// LD (0xFF00 + C), A
+	@Opcode(code = 0xE2, cycles = 8) void xE2() {
+		DWord address = DataHelper.parseDWord(0xFF00);
+		DataHelper.inc(address, C);
+		memory.loadWord(DataHelper.parseMemoryAddr(address), A);
 	}
 
 	// LD B,
@@ -207,7 +210,7 @@ public class Processor {
 	// ADD A, (r16)
 	@Opcode(code = 0x83, cycles = 8) void x86() { ADD_RM(A, HL); }
 
-	@Opcode(code = 0xC6, cycles = 8) void xC6() { ADD_RI(A); }
+	@Opcode(code = 0xC6, cycles = 8) void xC6() { ADD_RMI(A); }
 
 
 	// LD r8, i
@@ -235,50 +238,56 @@ public class Processor {
 	// @Opcode(code = CE
 
 	/**
-	 * 16-Bit Airthmetic
+	 * 16-Bit Arithmetic
 	 */
+	// ADD SP, imm8 (n => one byte signed imm value)
+	// Add imm8 to Stack Pointer affected Z=0, N=0 -> H and C according to op
+	@Opcode(code = 0xE8, cycles = 16) void xE8() {
+		// pass
+	}
+
 	// INC r16
-	@Opcode(code = 0x03, cycles = 8) void x03() { ProcessorHelper.inc(BC, parseWord(1)); }
-	@Opcode(code = 0x13, cycles = 8) void x13() { ProcessorHelper.inc(DE, parseWord(1)); }
-	@Opcode(code = 0x23, cycles = 8) void x23() { ProcessorHelper.inc(HL, parseWord(1)); }
-	@Opcode(code = 0x33, cycles = 8) void x33() { ProcessorHelper.inc(SP, parseWord(1)); }
+	@Opcode(code = 0x03, cycles = 8) void x03() { DataHelper.inc(BC,1); }
+	@Opcode(code = 0x13, cycles = 8) void x13() { DataHelper.inc(DE,1); }
+	@Opcode(code = 0x23, cycles = 8) void x23() { DataHelper.inc(HL,1); }
+	@Opcode(code = 0x33, cycles = 8) void x33() { DataHelper.inc(SP,1); }
 
 	// DEC r16
-	@Opcode(code = 0x0B, cycles = 8) void x0B() { ProcessorHelper.dec(BC, parseWord(1)); }
-	@Opcode(code = 0x1B, cycles = 8) void x1B() { ProcessorHelper.dec(DE, parseWord(1)); }
-	@Opcode(code = 0x2B, cycles = 8) void x2B() { ProcessorHelper.dec(HL, parseWord(1)); }
-	@Opcode(code = 0x3B, cycles = 8) void x3B() { ProcessorHelper.dec(SP, parseWord(1)); }
+	@Opcode(code = 0x0B, cycles = 8) void x0B() { DataHelper.dec(BC, 1); }
+	@Opcode(code = 0x1B, cycles = 8) void x1B() { DataHelper.dec(DE, 1); }
+	@Opcode(code = 0x2B, cycles = 8) void x2B() { DataHelper.dec(HL, 1); }
+	@Opcode(code = 0x3B, cycles = 8) void x3B() { DataHelper.dec(SP, 1); }
 
 	/**
 	 * LD r1, i8
 	 * Put i into r1. (i is an 8-bit inmmediate value located in PC+1)
 	 */
 	protected void LD_RI(WRegister r1) {
-		MemoryAddr i8 = MemoryHelper.getNextFrom(parseMemoryAddr(PC));
-		r1.setValue(memoryMap.retrieveWord(i8));
-		ProcessorHelper.inc(PC, parseWord(1));
+		MemoryAddr i8Addr = MemoryHelper.getNextFrom(DataHelper.parseMemoryAddr(PC));
+		r1.setValue(memory.retrieveWord(i8Addr));
+		DataHelper.inc(PC, 1);
 	}
 
 	/**
-	 * LD r1, r2
-	 * Put r2 into r1.
+	 * LD r8, r'8
+	 * Put r'8 into r8.
 	 */
-	protected void LD_RR(WRegister r1, WRegister r2) { A.setValue(r2); }
+	protected void LD_RR(WRegister r1, WRegister r2) { r1.setValue(r2); }
 
 	/**
-	 * LD r1, (r2)
+	 * LD r8, (r16)
 	 * Put word located in memory address r2 into r1.
 	 */
 	protected void LD_RM(WRegister r1, DWRegister r2) {
-		r1.setValue(memoryMap.retrieveWord(parseMemoryAddr(r2)));
+		r1.setValue(memory.retrieveWord(DataHelper.parseMemoryAddr(r2)));
 	}
 
 	/**
-	 * LD (r1), r2
+	 * LD (r16), r8
 	 * Put r2 into memory address r1.
 	 */
 	protected void LD_MR(DWRegister r1, WRegister r2) {
-		memoryMap.loadWord(parseMemoryAddr(r1), r2);
+		memory.loadWord(DataHelper.parseMemoryAddr(r1), r2);
 	}
 
 	/**
@@ -286,10 +295,10 @@ public class Processor {
 	 * Put inmmediate into memory address located in r1.
 	 */
 	protected void LD_MI(DWRegister r1) {
-		MemoryAddr r1Addr = parseMemoryAddr(r1);
-		MemoryAddr i8Addr = MemoryHelper.getNextFrom(parseMemoryAddr(PC));
-		memoryMap.loadWord(r1Addr, memoryMap.retrieveWord(i8Addr));
-		ProcessorHelper.inc(PC, parseWord(1));
+		MemoryAddr addr = DataHelper.parseMemoryAddr(r1);
+		MemoryAddr immAddr = MemoryHelper.getNextFrom(DataHelper.parseMemoryAddr(PC));
+		memory.loadWord(addr, memory.retrieveWord(immAddr));
+		DataHelper.inc(PC, 1);
 	}
 
 	/**
@@ -297,15 +306,15 @@ public class Processor {
 	 * ii = Two byte inmmediate value (LS byte first)
 	 */
 	protected void LD_RMI(WRegister r1) {
-		MemoryAddr lowWordAddr = MemoryHelper.getNextFrom(parseMemoryAddr(PC)); // LS byte first
+		MemoryAddr lowWordAddr = MemoryHelper.getNextFrom(DataHelper.parseMemoryAddr(PC)); // LS byte first
 		MemoryAddr highWordAddr = MemoryHelper.getNextFrom(lowWordAddr);
 
-		Word lowWord = memoryMap.retrieveWord(lowWordAddr);
-		Word highWord = memoryMap.retrieveWord(highWordAddr);
-		DWord address = createDWord(highWord, lowWord);
+		Word lowWord = memory.retrieveWord(lowWordAddr);
+		Word highWord = memory.retrieveWord(highWordAddr);
+		DWord address = DataHelper.createDWord(highWord, lowWord);
 
-		MemoryAddr memoryAddr = parseMemoryAddr(address);
-		r1.setValue(memoryMap.retrieveWord(memoryAddr));
+		MemoryAddr memoryAddr = DataHelper.parseMemoryAddr(address);
+		r1.setValue(memory.retrieveWord(memoryAddr));
 	}
 
 	/**
@@ -314,15 +323,15 @@ public class Processor {
 	 * ii = Two byte inmmediate value (LS byte first)
 	 */
 	protected void LD_MIR(WRegister r1) {
-		MemoryAddr lowWordAddr = MemoryHelper.getNextFrom(parseMemoryAddr(PC)); // LS byte first
+		MemoryAddr lowWordAddr = MemoryHelper.getNextFrom(DataHelper.parseMemoryAddr(PC)); // LS byte first
 		MemoryAddr highWordAddr = MemoryHelper.getNextFrom(lowWordAddr);
 
-		Word lowWord = memoryMap.retrieveWord(lowWordAddr);
-		Word highWord = memoryMap.retrieveWord(highWordAddr);
-		DWord address = createDWord(highWord, lowWord);
+		Word lowWord = memory.retrieveWord(lowWordAddr);
+		Word highWord = memory.retrieveWord(highWordAddr);
+		DWord address = DataHelper.createDWord(highWord, lowWord);
 
-		MemoryAddr memoryAddr = parseMemoryAddr(address);
-		memoryMap.loadWord(memoryAddr, r1);
+		MemoryAddr memoryAddr = DataHelper.parseMemoryAddr(address);
+		memory.loadWord(memoryAddr, r1);
 	}
 
 	/**
@@ -335,8 +344,8 @@ public class Processor {
 	}
 
 	protected void ADD_RM(WRegister r1, DWRegister r2) {
-		MemoryAddr r2Addr = parseMemoryAddr(r2);
-		ProcessorHelper.add(r1, memoryMap.retrieveWord(r2Addr));
+		MemoryAddr r2Addr = DataHelper.parseMemoryAddr(r2);
+		ProcessorHelper.add(r1, memory.retrieveWord(r2Addr));
 	}
 
 	/**
@@ -344,9 +353,9 @@ public class Processor {
 	 * Add (ii) into r1.
 	 * Flags can be affected: Z, H, C.
 	 */
-	protected void ADD_RI(WRegister r1) {
-		MemoryAddr i16Addr = MemoryHelper.getNextFrom(parseMemoryAddr(PC));
-		ProcessorHelper.add(r1, memoryMap.retrieveWord(i16Addr));
+	protected void ADD_RMI(WRegister r1) {
+		MemoryAddr i16Addr = MemoryHelper.getNextFrom(DataHelper.parseMemoryAddr(PC));
+		ProcessorHelper.add(r1, memory.retrieveWord(i16Addr));
 	}
 
 	/**
@@ -355,7 +364,7 @@ public class Processor {
 	protected void ADC_RR(WRegister r1, WRegister r2) {
 		Word n = r2.clone();
 		if (ProcessorHelper.getCarryFlag()) {
-			ProcessorHelper.inc(n, parseWord(1));
+			DataHelper.inc(n, 1);
 		}
 		ProcessorHelper.add(r1, n);
 	}
@@ -364,21 +373,20 @@ public class Processor {
 	 * ADC r1, (r2) + CarryFlag
 	 * Put word located in memory address r2 into r1.
 	 */
-	protected void ADC_RR(WRegister r1, DWRegister r2) {
-		Word n = memoryMap.retrieveWord(parseMemoryAddr(r2));
+	protected void ADC_RM(WRegister r1, DWRegister r2) {
+		Word n = memory.retrieveWord(DataHelper.parseMemoryAddr(r2));
 		if (ProcessorHelper.getCarryFlag()) {
-			ProcessorHelper.inc(n, parseWord(1));
+			DataHelper.inc(n, 1);
 		}
 		ProcessorHelper.add(r1, n);
 	}
 
 	protected void reset() {
-		DWord zero = Datatype.parseDWord(0);
-		AF.copy(zero);
-		BC.copy(zero);
-		DE.copy(zero);
-		HL.copy(zero);
-		SP.copy(zero);
-		PC.copy(zero);
+		AF.copy(DZERO);
+		BC.copy(DZERO);
+		DE.copy(DZERO);
+		HL.copy(DZERO);
+		SP.copy(DZERO);
+		PC.copy(DZERO);
 	}
 }

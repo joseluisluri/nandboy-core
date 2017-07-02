@@ -1,24 +1,24 @@
-package core;
+package common;
 
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
+import processor.registers.DWRegister;
 
 @EqualsAndHashCode
 public class DWord {
     protected final String STRING_FORMAT = "0x%02X%02X";
 
-    protected Word highWord = new Word();
-    protected Word lowWord = new Word();
+    protected final Word highWord;
+    protected final Word lowWord;
 
-    protected DWord() {}
-
-    protected DWord(DWord dWord) {
-        setValue(dWord);
+    protected DWord() {
+        highWord = new Word();
+        lowWord = new Word();
     }
 
-    protected DWord(Word highWord, Word lowWord) {
-        this.highWord.copy(highWord);
-        this.lowWord.copy(lowWord);
+    protected DWord(@NonNull Word highWord, @NonNull Word lowWord) {
+        this.highWord = highWord;
+        this.lowWord = lowWord;
     }
 
     public void setHighWord(@NonNull Word word) {
@@ -48,12 +48,11 @@ public class DWord {
 
     @Override
     public DWord clone() {
-        return new DWord(this);
+        return new DWord(getHighWord(), getLowWord());
     }
 
     @Override
     public String toString() {
         return String.format(STRING_FORMAT, highWord.getValue(), lowWord.getValue());
     }
-
 }

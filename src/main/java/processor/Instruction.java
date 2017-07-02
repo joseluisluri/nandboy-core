@@ -1,11 +1,10 @@
-package cpu;
+package processor;
 
-import cpu.exceptions.InstructionException;
+import processor.exceptions.InstructionException;
 import lombok.*;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-
 
 @Getter
 public class Instruction {

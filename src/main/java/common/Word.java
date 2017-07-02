@@ -1,4 +1,4 @@
-package core;
+package common;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -18,11 +18,7 @@ public class Word {
         this.value = value;
     }
 
-    protected Word(Word word) {
-        copy(word);
-    }
-
-    public void setValue(Word word) {
+    public void setValue(@NonNull Word word) {
         value = word.value;
     }
 
@@ -30,8 +26,8 @@ public class Word {
         value = word.value;
     }
 
-    public Word clone() {
-        return new Word(this);
+    public Word clone()  {
+        return new Word(this.value);
     }
 
     @Override

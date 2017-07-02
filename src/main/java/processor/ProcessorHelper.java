@@ -1,46 +1,17 @@
-package cpu;
+package processor;
 
-import core.DWord;
-import core.Datatype;
-import core.Word;
-import cpu.exceptions.NoSuchOpcodeException;
+import processor.registers.DWRegister;
+import processor.registers.WRegister;
+import common.Word;
 import lombok.NonNull;
-import lombok.Setter;
-
-import javax.xml.crypto.Data;
-
-import static core.Datatype.parseDWord;
-import static core.Datatype.parseInt;
-import static core.Datatype.parseWord;
+import static common.DataHelper.parseInt;
+import static common.DataHelper.parseWord;
 
 class ProcessorHelper {
     public static final byte ZERO_FLAG_BITMASK = (byte) 0x80; // 7th bit
     public static final byte SUBSTRACT_FLAG_BITMASK = (byte) 0x40; // 6th bit
     public static final byte HALF_CARRY_FLAG_BITMASK = (byte) 0x20; // 5th bit
     public static final byte CARRY_FLAG_BITMASK = (byte) 0x10; // 4th bit and 0-3 always zero
-
-    static WRegister F = Processor.getInstance().F;
-    static DWRegister PC = Processor.getInstance().PC;
-
-    static void inc(@NonNull Word word, @NonNull Word i) {
-        word.copy(parseWord(word.getValue() + i.getValue()));
-    }
-
-    static void dec(@NonNull Word word, @NonNull Word i) {
-        word.copy(parseWord(word.getValue() - i.getValue()));
-    }
-
-    // Add i into dWord and returns the carry.
-    static void inc(@NonNull DWord dWord, @NonNull Word i) {
-        int result = parseInt(dWord) + (0xFF & i.getValue());
-        dWord.setValue(parseDWord(result));
-    }
-
-    // Add i into dWord and returns the carry.
-    static void dec(@NonNull DWord dWord, @NonNull Word i) {
-        int result = parseInt(dWord) - (0xFF & i.getValue());
-        dWord.setValue(parseDWord(result));
-    }
 
     static void add(@NonNull WRegister register, @NonNull Word i) {
         int result = parseInt(register) + parseInt(i);
@@ -57,18 +28,19 @@ class ProcessorHelper {
         setCarryFlag((result >> 16) == 1);
     }
 
-    static Instruction getInstructionFromOpcode(byte opcode) throws NoSuchOpcodeException {
+    /*static Instruction getInstructionFromOpcode(byte opcode) throws NoSuchOpcodeException {
         if (Processor.isa.containsKey(opcode)) {
             return Processor.isa.get(opcode);
         } else {
             throw new NoSuchOpcodeException("Opcode does not exist");
         }
-    }
+    }*/
 
     /*
      * Set the status of a flags
      */
     private static void setFlags(boolean status, byte bitmask) {
+        WRegister F = Processor.getInstance().F;
         F.setValue(parseWord((status ? bitmask | F.getValue() : (0xFF ^ bitmask) & F.getValue())));
     }
 
@@ -92,7 +64,7 @@ class ProcessorHelper {
     * Query the status of a flags
     */
     private static boolean queryFlags(byte bitmask) {
-        return (bitmask & F.getValue()) == bitmask;
+        return (bitmask & Processor.getInstance().F.getValue()) == bitmask;
     }
 
     static boolean getZeroFlag() {

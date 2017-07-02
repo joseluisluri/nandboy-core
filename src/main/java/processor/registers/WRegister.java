@@ -1,6 +1,6 @@
-package cpu;
+package processor.registers;
 
-import core.Word;
+import common.Word;
 import lombok.NonNull;
 
 public class WRegister extends Word {

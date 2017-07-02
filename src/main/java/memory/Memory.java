@@ -1,32 +1,32 @@
 package memory;
 
-import core.DWord;
-import core.Datatype;
-import core.MemoryAddr;
-import core.Word;
+import common.DWord;
+import common.MemoryAddr;
+import common.Word;
 import memory.exceptions.MemoryException;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.IntStream;
 
-public class MemoryMap {
-    private static final Word INITIAL_WORD_VALUE = Datatype.parseWord(0);
+import static common.DataHelper.*;
+public class Memory {
+    private static final Word INITIAL_WORD_VALUE = parseWord(0);
     private Map<MemoryAddr, Word> map;
 
-    private static MemoryMap singleton = null;
+    private static Memory singleton = null;
 
-    public static MemoryMap getInstance() {
+    public static Memory getInstance() {
         if (singleton == null) {
-            singleton = new MemoryMap();
+            singleton = new Memory();
         }
         return singleton;
     }
 
-    private MemoryMap() {
+    private Memory() {
         map = new HashMap<>(MemoryAddr.MAX_INDEX);
         IntStream.range(MemoryAddr.MIN_INDEX, map.size()).forEach(i -> {
-            map.put(Datatype.parseMemoryAddr(i),INITIAL_WORD_VALUE.clone());
+            map.put(parseMemoryAddr(i),INITIAL_WORD_VALUE.clone());
         });
     }
 
@@ -53,7 +53,7 @@ public class MemoryMap {
     public DWord retrieveDWord(MemoryAddr memoryAddr) throws MemoryException {
         if (!memoryAddr.equals(MemoryAddr.MAX_VALUE)) {
             MemoryAddr nextAddr = MemoryHelper.getNextFrom(memoryAddr);
-            return Datatype.createDWord(map.get(memoryAddr), map.get(nextAddr));
+            return createDWord(map.get(memoryAddr), map.get(nextAddr));
         } else {
             throw new MemoryException("Memory address out of bounds");
         }

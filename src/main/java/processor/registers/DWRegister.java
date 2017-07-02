@@ -1,6 +1,6 @@
-package cpu;
+package processor.registers;
 
-import core.DWord;
+import common.DWord;
 import lombok.NonNull;
 
 public class DWRegister extends DWord {
@@ -9,8 +9,7 @@ public class DWRegister extends DWord {
     }
 
     protected DWRegister(WRegister highWord, WRegister lowWord) {
-        this.highWord = highWord;
-        this.lowWord = lowWord;
+        super(highWord, lowWord);
     }
 
     public static DWRegister newInstance() {
